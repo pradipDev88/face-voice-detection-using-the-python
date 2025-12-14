@@ -1,0 +1,50 @@
+# Configuration for Mr. Beast Voice Robot
+
+# Database Configuration
+database:
+  host: localhost
+  port: 3306
+  user: root
+  password: ""
+  database: mr_beast_db
+
+# Voice Configuration
+voice:
+  stt_engine: google  # google, sphinx, whisper
+  tts_engine: pyttsx3  # pyttsx3, gtts
+  language: en-IN
+  speech_rate: 150
+  volume: 0.9
+
+# Face Recognition
+face:
+  embedding_model: facenet  # facenet, dlib
+  similarity_threshold: 0.6
+  auto_capture_delay: 2  # seconds
+
+# AI Brain
+ai:
+  intent_model: naive_bayes  # naive_bayes, svm, neural
+  clustering_algorithm: kmeans
+  num_clusters: 5
+  confidence_threshold: 0.7
+
+# Robot Personality
+robot:
+  name: Mr. Beast
+  greeting: "Hello! I am Mr. Beast. How can I help you today?"
+  personality: friendly  # friendly, professional, casual
+
+# UI Configuration
+ui:
+  window_width: 1200
+  window_height: 800
+  camera_width: 640
+  camera_height: 480
+  theme: dark  # dark, light
+
+# Paths
+paths:
+  captures: captures/
+  embeddings: models/embedding_model/
+  logs: logs/

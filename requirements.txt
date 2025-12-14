@@ -1,0 +1,32 @@
+# Existing modules (DO NOT REMOVE)
+opencv-python==4.8.1.78
+opencv-contrib-python==4.8.1.78
+numpy==1.24.3
+Pillow==10.1.0
+
+# Optional (for emotion recognition - may have issues)
+# tensorflow==2.15.0
+# keras==2.15.0
+
+# NEW: Face Recognition & Embeddings
+face-recognition==1.3.0
+dlib==19.24.2
+
+# NEW: Voice (STT/TTS)
+SpeechRecognition==3.10.0
+pyttsx3==2.90
+pyaudio==0.2.13
+
+# NEW: Database
+mysql-connector-python==8.2.0
+PyMySQL==1.1.0
+
+# NEW: AI/ML (Supervised + Unsupervised)
+scikit-learn==1.3.2
+scipy==1.11.4
+
+# NEW: Configuration
+PyYAML==6.0.1
+
+# Utilities
+python-dateutil==2.8.2
