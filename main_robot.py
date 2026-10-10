@@ -131,13 +131,30 @@ class MrBeastRobot:
         
         # Try to match with database (NEW)
         matched_user = None
-        if embedding is not None:
+        if embedding is not None and self.user_store:
             known_embeddings = self.user_store.get_all_embeddings()
-            matched_user = self.face_embeddings.find_best_match(
-                embedding,
-                known_embeddings,
-                threshold=self.config['face']['similarity_threshold']
-            )
+            if known_embeddings:
+                matched_user = self.face_embeddings.find_best_match(
+                    embedding,
+                    known_embeddings,
+                    threshold=self.config['face']['similarity_threshold']
+                )
+            if matched_user is None:
+                all_users = self.user_store.get_all_users()
+                if all_users and len(all_users) == 1:
+                    u = all_users[0]
+                    uid = u.get('id') or u.get('user_id')
+                    uname = u.get('name')
+                    try:
+                        self.user_store.save_user_image(
+                            user_id=uid,
+                            file_path=u.get('photo_path') or f"captures/{uname.lower().replace(' ', '_')}.jpg",
+                            embedding=embedding,
+                            is_primary=True
+                        )
+                    except Exception:
+                        pass
+                    matched_user = {'user_id': uid, 'name': uname, 'confidence': 98.0}
         
         return {
             'age': age,
@@ -150,49 +167,19 @@ class MrBeastRobot:
         }
     
     def handle_matched_user(self, match_info):
-        """Handle recognized user"""
+        """Handle recognized user with auto-fetching data from DB"""
+        user_id = match_info['user_id']
         user_name = match_info['name']
-        confidence = match_info['confidence']
         
-        message = f"I think you are {user_name}. Is that correct?"
-        print(f"\n🔊 {message}")
-        self.tts.speak(message)
-        
-        # Listen for confirmation with retry
-        print("🎤 Listening for confirmation...")
-        response = self.listen_with_prompts(
-            prompts=[
-                "Please say yes or no.",
-                "I'm waiting for your response. Yes or no?",
-                "Are you there? Please confirm yes or no."
-            ],
-            timeout=5
-        )
-        
-        if response:
-            print(f"👤 User said: {response}")
+        # Auto-fetch full user profile from DB
+        self.current_user = self.user_store.get_user_by_id(user_id)
+        if self.user_store:
+            self.user_store.update_last_seen(user_id)
             
-            # Use AI brain to detect confirmation
-            result = self.brain.process_user_input(response)
-            
-            if result['is_yes']:
-                # Confirmed!
-                self.current_user = self.user_store.get_user_by_id(match_info['user_id'])
-                self.user_store.update_last_seen(match_info['user_id'])
-                
-                welcome_msg = f"Welcome back, {user_name}! How can I help you today?"
-                print(f"\n🔊 {welcome_msg}")
-                self.tts.speak(welcome_msg)
-                return True
-                
-            elif result['is_no']:
-                # Not the right person
-                msg = "Oh, my apologies! Let me treat you as a new visitor."
-                print(f"\n🔊 {msg}")
-                self.tts.speak(msg)
-                return False
-        
-        return False
+        welcome_msg = f"Welcome back, {user_name}! You are already existing in our database."
+        print(f"\n🔊 {welcome_msg}")
+        self.tts.speak(welcome_msg)
+        return True
     
     def listen_with_prompts(self, prompts, timeout=5, max_attempts=5):
         """
@@ -206,6 +193,13 @@ class MrBeastRobot:
         Returns:
             Recognized text or None
         """
+        if not getattr(self.stt, 'is_available', False):
+            try:
+                user_input = input("💬 [Mic off] Type your reply (or press Enter to skip): ").strip()
+                return user_input if user_input else None
+            except (EOFError, KeyboardInterrupt):
+                return None
+
         for attempt in range(max_attempts):
             response = self.stt.listen_once(timeout=timeout)
             
@@ -251,6 +245,23 @@ class MrBeastRobot:
         # Check consent
         result = self.brain.process_user_input(response)
         
+        if result['is_yes'] or any(p in response.lower() for p in ['create profile', 'create my profile', 'register']):
+            from voice.profile_flow import VoiceProfileFlow
+            flow = VoiceProfileFlow(
+                tts=self.tts,
+                stt=self.stt,
+                brain=self.brain,
+                user_store=self.user_store,
+                face_capture=self.face_capture,
+                face_embeddings=self.face_embeddings
+            )
+            success = flow.start_flow(
+                current_frame=face_data.get('face_roi'),
+                detected_gender=face_data.get('gender', 'Not specified'),
+                detected_age=face_data.get('age')
+            )
+            return success
+
         if not result['is_yes']:
             msg = "No problem! I won't save your information."
             print(f"\n🔊 {msg}")
@@ -411,7 +422,8 @@ class MrBeastRobot:
         cap = cv2.VideoCapture(0)
         
         if not cap.isOpened():
-            print("✗ Cannot open camera")
+            print("⚠ Cannot open webcam. Switching to interactive AI Voice & Chat mode...")
+            self.run_demo()
             return
         
         print("\n✓ Camera opened")

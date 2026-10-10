@@ -5,15 +5,18 @@ Welcome to the Face Detection + Age & Gender + Emotion Recognition Application!
 ## 📚 Documentation Files
 
 ### Getting Started
+
 1. **QUICKSTART.md** ⚡ - Get running in 5 minutes
 2. **INSTALLATION_GUIDE.md** 📦 - Detailed installation steps
 3. **README.md** 📖 - Complete project documentation
 
 ### Technical Documentation
+
 4. **PROJECT_SUMMARY.md** 📋 - Architecture and design overview
 5. **TESTING_GUIDE.md** 🧪 - Testing procedures and validation
 
 ### Helper Files
+
 6. **models/README.md** 🤖 - Model download instructions
 7. **captures/README.md** 📸 - Captured photos information
 
@@ -22,39 +25,51 @@ Welcome to the Face Detection + Age & Gender + Emotion Recognition Application!
 ### I want to...
 
 #### ...get started quickly
+
 → Read **QUICKSTART.md**
 
 #### ...understand the installation process
+
 → Read **INSTALLATION_GUIDE.md**
 
 #### ...download the models
+
 → Read **models/README.md**
 
 #### ...understand the code architecture
+
 → Read **PROJECT_SUMMARY.md**
 
 #### ...test the application
+
 → Read **TESTING_GUIDE.md**
 
 #### ...see all features and usage
+
 → Read **README.md**
 
 ## 🛠️ Utility Scripts
 
 ### check_setup.py
+
 Verifies your installation is complete and correct.
+
 ```bash
 python check_setup.py
 ```
 
 ### download_models.py
+
 Helper script for downloading model files.
+
 ```bash
 python download_models.py
 ```
 
 ### main.py
+
 The main application entry point.
+
 ```bash
 python main.py
 ```
@@ -94,40 +109,45 @@ project/
 ## 🎯 Recommended Reading Order
 
 ### For First-Time Users:
+
 1. QUICKSTART.md
 2. models/README.md (to download models)
 3. README.md (for full features)
 
 ### For Developers:
+
 1. PROJECT_SUMMARY.md
 2. README.md
 3. Source code in core/ and ui/
 
 ### For Troubleshooting:
+
 1. INSTALLATION_GUIDE.md
 2. TESTING_GUIDE.md
 3. models/README.md
 
 ## 📊 File Purposes
 
-| File | Purpose | When to Read |
-|------|---------|--------------|
-| QUICKSTART.md | Fast setup | First time setup |
-| README.md | Complete guide | Understanding features |
-| INSTALLATION_GUIDE.md | Detailed setup | Installation issues |
-| PROJECT_SUMMARY.md | Architecture | Understanding code |
-| TESTING_GUIDE.md | Testing | Validation & debugging |
-| models/README.md | Model downloads | Getting models |
-| check_setup.py | Verification | After installation |
+| File                  | Purpose         | When to Read           |
+| --------------------- | --------------- | ---------------------- |
+| QUICKSTART.md         | Fast setup      | First time setup       |
+| README.md             | Complete guide  | Understanding features |
+| INSTALLATION_GUIDE.md | Detailed setup  | Installation issues    |
+| PROJECT_SUMMARY.md    | Architecture    | Understanding code     |
+| TESTING_GUIDE.md      | Testing         | Validation & debugging |
+| models/README.md      | Model downloads | Getting models         |
+| check_setup.py        | Verification    | After installation     |
 
 ## 🔗 External Resources
 
 ### Model Sources
+
 - OpenCV DNN Face Detector
 - Gil Levi & Tal Hassner Age/Gender Models
 - FER2013 Emotion Recognition Model
 
 ### Frameworks
+
 - OpenCV: https://opencv.org/
 - TensorFlow: https://www.tensorflow.org/
 - Keras: https://keras.io/

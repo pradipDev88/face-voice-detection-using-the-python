@@ -1,50 +1,89 @@
-# Configuration for Mr. Beast Voice Robot
+# ==============================================================================
+# Configuration for Mr. Beast AI — Advanced Multilingual Voice Robot
+# ==============================================================================
 
-# Database Configuration
+app:
+  name: "Mr. Beast AI"
+  mode: gui # gui, cli, voice
+  theme: dark
+
+ai:
+  primary_provider: ollama # ollama, groq, gemini, openrouter
+  fallback_provider: null
+  allow_paid_fallback: false
+  request_timeout_seconds: 60
+  intent_model: naive_bayes # naive_bayes, svm
+  clustering_algorithm: kmeans
+  num_clusters: 5
+  confidence_threshold: 0.7
+
+speech_to_text:
+  provider: google # google, faster_whisper, groq
+  model: small
+  device: auto
+  language: auto # auto, en-IN, hi-IN, en-US
+
+text_to_speech:
+  provider: pyttsx3 # pyttsx3, piper, google_cloud
+  language: auto
+  speech_rate: 160
+  volume: 0.9
+
+wake_word:
+  enabled: false
+  model: hey_beast
+
+vision:
+  enabled: true
+  face_recognition_enabled: true
+  similarity_threshold: 0.6
+  auto_capture_delay: 2
+  age_estimation_enabled: true
+  use_agify_api: true
+
 database:
+  provider: mysql # mysql, sqlite
   host: localhost
   port: 3306
   user: root
   password: ""
   database: mr_beast_db
+  sqlite_path: captures/local_robot.db
 
-# Voice Configuration
-voice:
-  stt_engine: google  # google, sphinx, whisper
-  tts_engine: pyttsx3  # pyttsx3, gtts
-  language: en-IN
-  speech_rate: 150
-  volume: 0.9
+privacy:
+  store_full_transcripts: false
+  require_profile_confirmation: true
+  require_photo_consent: true
+  require_biometric_consent: true
 
-# Face Recognition
-face:
-  embedding_model: facenet  # facenet, dlib
-  similarity_threshold: 0.6
-  auto_capture_delay: 2  # seconds
-
-# AI Brain
-ai:
-  intent_model: naive_bayes  # naive_bayes, svm, neural
-  clustering_algorithm: kmeans
-  num_clusters: 5
-  confidence_threshold: 0.7
-
-# Robot Personality
 robot:
-  name: Mr. Beast
-  greeting: "Hello! I am Mr. Beast. How can I help you today?"
-  personality: friendly  # friendly, professional, casual
+  name: "Mr. Beast"
+  greeting: "Hello! I am Mr. Beast. How can I help you today? Aap mujhse Hindi ya English me baat kar sakte hain!"
+  personality: friendly # friendly, professional, energetic
 
-# UI Configuration
 ui:
   window_width: 1200
   window_height: 800
   camera_width: 640
   camera_height: 480
-  theme: dark  # dark, light
+  theme: dark
 
-# Paths
 paths:
   captures: captures/
   embeddings: models/embedding_model/
   logs: logs/
+  offline_cache: captures/profiles.json
+  sync_queue: captures/sync_queue.json
+
+# Backward compatibility sections
+voice:
+  stt_engine: google
+  tts_engine: pyttsx3
+  language: en-IN
+  speech_rate: 160
+  volume: 0.9
+
+face:
+  embedding_model: facenet
+  similarity_threshold: 0.6
+  auto_capture_delay: 2

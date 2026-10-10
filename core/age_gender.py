@@ -137,11 +137,18 @@ class AgeGenderPredictor:
         # Model mean values
         self.MODEL_MEAN_VALUES = (78.4263377603, 87.7689143744, 114.895847746)
         
+        # Third-party Age Service
+        try:
+            from vision.age_api import ThirdPartyAgeService
+            self.api_service = ThirdPartyAgeService()
+        except Exception:
+            self.api_service = None
+
         print("✓ Age and Gender models loaded")
     
     def predict(self, face_img):
         """
-        Predict age and gender from face image
+        Predict age and gender from face image using local Caffe models
         
         Args:
             face_img: Face region image
@@ -174,6 +181,36 @@ class AgeGenderPredictor:
         age_display = self.age_display_map.get(age_range, age_range)
         
         return age_display, gender, age_range
+
+    def predict_with_api(self, face_img, user_name=None):
+        """
+        Estimate age using free third-party APIs (Agify by name, HuggingFace by image),
+        falling back gracefully to local Caffe model.
+        
+        Args:
+            face_img: Face region image (numpy array)
+            user_name: Optional user name for free Agify API lookup
+            
+        Returns:
+            Tuple of (age_display, gender, age_range, provider_name)
+        """
+        # Run local prediction for baseline gender and fallback age
+        local_age, gender, local_range = self.predict(face_img)
+        
+        # Try Agify free API if user name is known
+        if user_name and self.api_service:
+            agify_res = self.api_service.estimate_age_from_name(user_name)
+            if agify_res and agify_res.get('age'):
+                return str(agify_res['age']), gender, f"({agify_res['age']})", agify_res['provider']
+                
+        # Try Hugging Face image API if configured
+        if self.api_service:
+            api_res = self.api_service.estimate_age_from_image(face_roi=face_img)
+            if api_res and api_res.get('age'):
+                return api_res['age'], gender, api_res.get('age_range', local_range), api_res['provider']
+                
+        # Fallback to local model
+        return local_age, gender, local_range, "Local Caffe Model"
     
     def get_detailed_info(self, age_range):
         """

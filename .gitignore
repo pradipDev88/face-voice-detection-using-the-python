@@ -38,6 +38,16 @@ captures/*.png
 *.swo
 *~
 
+# Environment & Secrets
+.env
+*.env
+*.key
+*.pem
+
+# Logs
+logs/
+*.log
+
 # OS
 .DS_Store
 Thumbs.db

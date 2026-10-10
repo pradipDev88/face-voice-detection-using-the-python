@@ -63,6 +63,7 @@ class HybridBrain:
         responses = {
             'greeting': "Hello! I'm Mr. Beast, your AI assistant. How can I help you today?",
             'info_request': "I'm Mr. Beast, an AI-powered voice robot. I can recognize faces, detect age and gender, and have conversations with you!",
+            'create_profile': "Yes, let's start! Tell me first, what is your full name?",
             'consent_yes': "Great! Thank you for your consent.",
             'consent_no': "No problem! I won't save your information.",
             'goodbye': "Goodbye! Have a great day!",
@@ -175,13 +176,17 @@ class HybridBrain:
         
         Args:
             text: User input
-            info_type: 'name', 'job', or 'college'
+            info_type: 'name', 'full_name', 'age', 'address', 'job', or 'college'
             
         Returns:
             Extracted information or None
         """
-        if info_type == 'name':
-            return self.supervised_brain.extract_name(text)
+        if info_type in ['name', 'full_name']:
+            return self.supervised_brain.extract_full_name(text) or self.supervised_brain.extract_name(text)
+        elif info_type == 'age':
+            return self.supervised_brain.extract_age(text)
+        elif info_type == 'address':
+            return self.supervised_brain.extract_address(text)
         elif info_type in ['job', 'college']:
             return self.supervised_brain.extract_job_or_college(text)
         return None

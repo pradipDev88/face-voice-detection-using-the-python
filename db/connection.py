@@ -61,6 +61,9 @@ class DatabaseConnection:
     
     def execute_query(self, query, params=None):
         """Execute a query (INSERT, UPDATE, DELETE)"""
+        if not self.connection or not self.is_connected():
+            return None
+        cursor = None
         try:
             cursor = self.connection.cursor()
             if params:
@@ -73,10 +76,14 @@ class DatabaseConnection:
             print(f"Query execution error: {e}")
             return None
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
     
     def fetch_one(self, query, params=None):
         """Fetch single result"""
+        if not self.connection or not self.is_connected():
+            return None
+        cursor = None
         try:
             cursor = self.connection.cursor(dictionary=True)
             if params:
@@ -89,10 +96,14 @@ class DatabaseConnection:
             print(f"Fetch error: {e}")
             return None
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
     
     def fetch_all(self, query, params=None):
         """Fetch all results"""
+        if not self.connection or not self.is_connected():
+            return []
+        cursor = None
         try:
             cursor = self.connection.cursor(dictionary=True)
             if params:
@@ -105,7 +116,8 @@ class DatabaseConnection:
             print(f"Fetch error: {e}")
             return []
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
     
     def is_connected(self):
         """Check if database is connected"""

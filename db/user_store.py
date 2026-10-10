@@ -1,169 +1,271 @@
 """
 User Store Module
-Handles all user-related database operations
+Handles all user-related database operations with offline JSON backup
 """
-from db.connection import get_db
-from datetime import datetime
+import os
 import json
+from datetime import datetime
+from db.connection import get_db
+
 
 class UserStore:
-    """Manages user data in database"""
+    """Manages user data in MySQL database with offline fallback"""
     
-    def __init__(self):
-        """Initialize user store"""
-        self.db = get_db()
-    
-    def create_user(self, name, age_range, gender, college_or_job, consent='No'):
-        """Create new user"""
-        query = """
-        INSERT INTO user_info (name, age_range, gender, college_or_job, consent, first_seen, last_seen)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """
-        now = datetime.now()
-        params = (name, age_range, gender, college_or_job, consent, now, now)
-        user_id = self.db.execute_query(query, params)
+    def __init__(self, local_file=None, db=None):
+        """Initialize user store with optional custom file/db for test isolation"""
+        self.db = db if db is not None else get_db()
+        self.local_file = local_file or os.path.join(os.path.dirname(os.path.dirname(__file__)), 'captures', 'profiles.json')
+        os.makedirs(os.path.dirname(self.local_file), exist_ok=True)
+        if not os.path.exists(self.local_file):
+            try:
+                with open(self.local_file, 'w') as f:
+                    json.dump([], f)
+            except Exception:
+                pass
+
+    def _load_local_profiles(self):
+        """Load profiles from local fallback JSON"""
+        try:
+            if os.path.exists(self.local_file):
+                with open(self.local_file, 'r') as f:
+                    return json.load(f)
+        except Exception:
+            pass
+        return []
+
+    def _save_local_profiles(self, profiles):
+        """Save profiles to local fallback JSON"""
+        try:
+            with open(self.local_file, 'w') as f:
+                json.dump(profiles, f, indent=2)
+        except Exception as e:
+            print(f"⚠ Could not save local profile backup: {e}")
+
+    def create_user(self, name, age_range, gender, college_or_job, address='', photo_path='', consent='Yes'):
+        """Create new user in MySQL and offline store"""
+        now_str = datetime.now().isoformat()
+        user_id = None
         
-        if user_id:
-            print(f"✓ User created: {name} (ID: {user_id})")
+        # 1. Try MySQL
+        if self.db and self.db.is_connected:
+            try:
+                # Try inserting with address and photo_path
+                query = """
+                INSERT INTO user_info (name, age_range, gender, college_or_job, address, photo_path, consent, first_seen, last_seen)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
+                params = (name, str(age_range), gender, college_or_job, address, photo_path, consent, datetime.now(), datetime.now())
+                user_id = self.db.execute_query(query, params)
+            except Exception:
+                try:
+                    query = """
+                    INSERT INTO user_info (name, age_range, gender, college_or_job, consent, first_seen, last_seen)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """
+                    params = (name, str(age_range), gender, college_or_job, consent, datetime.now(), datetime.now())
+                    user_id = self.db.execute_query(query, params)
+                except Exception as e:
+                    print(f"⚠ MySQL insert error: {e}")
+
+        # 2. Local fallback storage
+        profiles = self._load_local_profiles()
+        if user_id is None:
+            user_id = len(profiles) + 1001
+
+        profile_entry = {
+            'id': user_id,
+            'name': name,
+            'age_range': str(age_range),
+            'gender': gender,
+            'college_or_job': college_or_job,
+            'address': address,
+            'photo_path': photo_path,
+            'consent': consent,
+            'created_at': now_str,
+            'last_seen': now_str,
+            'conversation_count': 1,
+            'embeddings': []
+        }
+        
+        # Update if exists or append
+        existing_idx = next((i for i, p in enumerate(profiles) if p.get('name', '').lower() == name.lower()), None)
+        if existing_idx is not None:
+            profiles[existing_idx].update(profile_entry)
+        else:
+            profiles.append(profile_entry)
+            
+        self._save_local_profiles(profiles)
+        print(f"✓ Profile saved: {name} (ID: {user_id}) [Local JSON + DB]")
         return user_id
-    
+
     def get_user_by_id(self, user_id):
         """Get user by ID"""
-        query = "SELECT * FROM user_info WHERE id = %s"
-        return self.db.fetch_one(query, (user_id,))
-    
+        if self.db and self.db.is_connected:
+            try:
+                query = "SELECT * FROM user_info WHERE id = %s"
+                res = self.db.fetch_one(query, (user_id,))
+                if res:
+                    return res
+            except Exception:
+                pass
+        
+        # Fallback to local
+        for p in self._load_local_profiles():
+            if str(p.get('id')) == str(user_id):
+                return p
+        return None
+
     def get_user_by_name(self, name):
         """Get user by name"""
-        query = "SELECT * FROM user_info WHERE name = %s"
-        return self.db.fetch_one(query, (name,))
-    
+        if not name:
+            return None
+        if self.db and self.db.is_connected:
+            try:
+                query = "SELECT * FROM user_info WHERE name = %s"
+                res = self.db.fetch_one(query, (name,))
+                if res:
+                    return res
+            except Exception:
+                pass
+        
+        # Fallback to local
+        for p in self._load_local_profiles():
+            if p.get('name', '').lower() == name.lower():
+                return p
+        return None
+
+    def get_all_users(self):
+        """Get all users across MySQL and local storage"""
+        users = []
+        seen_ids = set()
+        if self.db and self.db.is_connected:
+            try:
+                query = "SELECT * FROM user_info ORDER BY id ASC"
+                rows = self.db.fetch_all(query)
+                for r in rows:
+                    users.append(r)
+                    seen_ids.add(str(r.get('id')))
+            except Exception:
+                pass
+
+        for p in self._load_local_profiles():
+            pid = str(p.get('id'))
+            if pid not in seen_ids:
+                users.append(p)
+                seen_ids.add(pid)
+        return users
+
     def update_last_seen(self, user_id):
         """Update user's last seen timestamp"""
-        query = "UPDATE user_info SET last_seen = %s WHERE id = %s"
-        self.db.execute_query(query, (datetime.now(), user_id))
-    
-    def update_user_info(self, user_id, **kwargs):
-        """Update user information"""
-        allowed_fields = ['name', 'age_range', 'gender', 'college_or_job', 'consent', 
-                         'conversation_count', 'avg_conversation_length', 'engagement_score', 'cluster_id']
+        if self.db and self.db.is_connected:
+            try:
+                query = "UPDATE user_info SET last_seen = %s WHERE id = %s"
+                self.db.execute_query(query, (datetime.now(), user_id))
+            except Exception:
+                pass
         
-        updates = []
-        params = []
-        
-        for key, value in kwargs.items():
-            if key in allowed_fields:
-                updates.append(f"{key} = %s")
-                params.append(value)
-        
-        if updates:
-            query = f"UPDATE user_info SET {', '.join(updates)} WHERE id = %s"
-            params.append(user_id)
-            self.db.execute_query(query, tuple(params))
-            print(f"✓ User {user_id} updated")
-    
+        profiles = self._load_local_profiles()
+        for p in profiles:
+            if str(p.get('id')) == str(user_id):
+                p['last_seen'] = datetime.now().isoformat()
+                p['conversation_count'] = p.get('conversation_count', 0) + 1
+                break
+        self._save_local_profiles(profiles)
+
     def save_user_image(self, user_id, file_path, embedding, is_primary=False):
         """Save user face image and embedding"""
-        query = """
-        INSERT INTO user_images (user_id, file_path, embedding, is_primary)
-        VALUES (%s, %s, %s, %s)
-        """
-        embedding_json = json.dumps(embedding.tolist() if hasattr(embedding, 'tolist') else embedding)
-        params = (user_id, file_path, embedding_json, is_primary)
-        image_id = self.db.execute_query(query, params)
+        image_id = None
+        embedding_list = embedding.tolist() if hasattr(embedding, 'tolist') else embedding
         
-        if image_id:
-            print(f"✓ Image saved for user {user_id}")
-        return image_id
-    
-    def get_user_embeddings(self, user_id):
-        """Get all embeddings for a user"""
-        query = "SELECT * FROM user_images WHERE user_id = %s"
-        results = self.db.fetch_all(query, (user_id,))
-        
-        # Parse JSON embeddings
-        for result in results:
-            if result['embedding']:
-                result['embedding'] = json.loads(result['embedding'])
-        
-        return results
-    
+        if self.db and self.db.is_connected:
+            try:
+                query = """
+                INSERT INTO user_images (user_id, file_path, embedding, is_primary)
+                VALUES (%s, %s, %s, %s)
+                """
+                embedding_json = json.dumps(embedding_list)
+                image_id = self.db.execute_query(query, (user_id, file_path, embedding_json, is_primary))
+            except Exception as e:
+                print(f"⚠ MySQL image insert error: {e}")
+
+        # Local storage
+        profiles = self._load_local_profiles()
+        for p in profiles:
+            if str(p.get('id')) == str(user_id):
+                p['photo_path'] = file_path
+                if embedding_list is not None:
+                    p.setdefault('embeddings', []).append(embedding_list)
+                break
+        self._save_local_profiles(profiles)
+        print(f"✓ Image saved for user {user_id}: {file_path}")
+        return image_id or 1
+
     def get_all_embeddings(self):
-        """Get all user embeddings for matching"""
-        query = """
-        SELECT ui.id as user_id, ui.name, uimg.embedding 
-        FROM user_info ui
-        JOIN user_images uimg ON ui.id = uimg.user_id
-        WHERE uimg.is_primary = TRUE OR uimg.image_id IN (
-            SELECT MAX(image_id) FROM user_images GROUP BY user_id
-        )
-        """
-        results = self.db.fetch_all(query)
-        
-        # Parse JSON embeddings
-        for result in results:
-            if result['embedding']:
-                result['embedding'] = json.loads(result['embedding'])
-        
+        """Get all user embeddings for matching (from DB and local file)"""
+        results = []
+        seen_user_ids = set()
+        if self.db and self.db.is_connected:
+            try:
+                query = """
+                SELECT ui.id as user_id, ui.name, uimg.embedding 
+                FROM user_info ui
+                JOIN user_images uimg ON ui.id = uimg.user_id
+                WHERE uimg.is_primary = TRUE OR uimg.image_id IN (
+                    SELECT MAX(image_id) FROM user_images GROUP BY user_id
+                )
+                """
+                db_results = self.db.fetch_all(query)
+                for r in db_results:
+                    if r.get('embedding'):
+                        r['embedding'] = json.loads(r['embedding']) if isinstance(r['embedding'], str) else r['embedding']
+                        results.append(r)
+                        seen_user_ids.add(str(r.get('user_id')))
+            except Exception:
+                pass
+
+        # Merge local profiles
+        for p in self._load_local_profiles():
+            uid = p.get('id')
+            uname = p.get('name')
+            if str(uid) in seen_user_ids:
+                continue
+            for emb in p.get('embeddings', []):
+                results.append({'user_id': uid, 'name': uname, 'embedding': emb})
+
         return results
-    
+
     def log_conversation(self, user_id, speaker, message, intent=None, confidence=None):
-        """Log conversation message"""
-        query = """
-        INSERT INTO conversation_log (user_id, speaker, message, intent, confidence)
-        VALUES (%s, %s, %s, %s, %s)
-        """
-        params = (user_id, speaker, message, intent, confidence)
-        self.db.execute_query(query, params)
-    
-    def get_conversation_history(self, user_id, limit=50):
-        """Get conversation history for user"""
-        query = """
-        SELECT * FROM conversation_log 
-        WHERE user_id = %s 
-        ORDER BY timestamp DESC 
-        LIMIT %s
-        """
-        return self.db.fetch_all(query, (user_id, limit))
-    
-    def save_user_behavior(self, user_id, behavior_data):
-        """Save user behavior data for clustering"""
-        query = """
-        INSERT INTO user_behavior 
-        (user_id, session_date, conversation_length, time_spent_seconds, 
-         speaking_speed, confirmation_count, emotion_happy_count, 
-         emotion_neutral_count, emotion_sad_count)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """
-        params = (
-            user_id,
-            datetime.now().date(),
-            behavior_data.get('conversation_length', 0),
-            behavior_data.get('time_spent_seconds', 0),
-            behavior_data.get('speaking_speed', 0.0),
-            behavior_data.get('confirmation_count', 0),
-            behavior_data.get('emotion_happy_count', 0),
-            behavior_data.get('emotion_neutral_count', 0),
-            behavior_data.get('emotion_sad_count', 0)
-        )
-        self.db.execute_query(query, params)
-    
-    def get_all_user_behaviors(self):
-        """Get all user behaviors for clustering"""
-        query = """
-        SELECT user_id, 
-               AVG(conversation_length) as avg_conv_length,
-               AVG(time_spent_seconds) as avg_time_spent,
-               AVG(speaking_speed) as avg_speaking_speed,
-               SUM(confirmation_count) as total_confirmations,
-               SUM(emotion_happy_count) as total_happy,
-               SUM(emotion_neutral_count) as total_neutral,
-               SUM(emotion_sad_count) as total_sad
-        FROM user_behavior
-        GROUP BY user_id
-        """
-        return self.db.fetch_all(query)
-    
-    def increment_conversation_count(self, user_id):
-        """Increment user's conversation count"""
-        query = "UPDATE user_info SET conversation_count = conversation_count + 1 WHERE id = %s"
-        self.db.execute_query(query, (user_id,))
+        """Log conversation message into MySQL and offline JSON log"""
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if self.db and self.db.is_connected:
+            try:
+                query = """
+                INSERT INTO conversation_log (user_id, speaker, message, intent, confidence)
+                VALUES (%s, %s, %s, %s, %s)
+                """
+                self.db.execute_query(query, (user_id, speaker, message, intent, confidence))
+            except Exception:
+                pass
+
+        # Offline fallback log
+        try:
+            log_file = os.path.join(os.path.dirname(self.local_file), 'conversation_logs.json')
+            logs = []
+            if os.path.exists(log_file):
+                with open(log_file, 'r', encoding='utf-8') as f:
+                    logs = json.load(f)
+            logs.append({
+                'log_id': len(logs) + 1,
+                'user_id': user_id,
+                'speaker': speaker,
+                'message': message,
+                'intent': intent or '--',
+                'confidence': float(confidence or 0.0),
+                'timestamp': now_str
+            })
+            if len(logs) > 200:
+                logs = logs[-200:]
+            with open(log_file, 'w', encoding='utf-8') as f:
+                json.dump(logs, f, indent=2)
+        except Exception:
+            pass

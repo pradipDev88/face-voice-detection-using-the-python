@@ -42,6 +42,15 @@ class FaceEmbeddings:
                 model=self.model
             )
             
+            # If cropped face ROI doesn't trigger HOG face detection, fall back to explicit ROI bounds
+            if len(encodings) == 0 and rgb_image.shape[0] >= 10 and rgb_image.shape[1] >= 10:
+                h, w = rgb_image.shape[:2]
+                encodings = face_recognition.face_encodings(
+                    rgb_image,
+                    known_face_locations=[(0, w, h, 0)],
+                    model=self.model
+                )
+            
             if len(encodings) > 0:
                 return encodings[0]  # Return first face encoding
             else:
