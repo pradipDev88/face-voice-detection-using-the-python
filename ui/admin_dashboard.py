@@ -144,15 +144,15 @@ class MrBeastAdminDashboard:
         search_entry.pack(side=tk.LEFT, padx=4)
         search_entry.bind("<Return>", lambda e: self.refresh_users())
 
-        tk.Button(toolbar, text="Filter", font=("Arial", 9, "bold"), bg="#34495e", fg="white", command=self.refresh_users).pack(side=tk.LEFT, padx=3)
-        tk.Button(toolbar, text="Clear", font=("Arial", 9), bg="#95a5a6", fg="white", command=self._clear_user_search).pack(side=tk.LEFT, padx=2)
+        tk.Button(toolbar, text="Filter", font=("Arial", 9, "bold"), bg="white", fg="black", activebackground="#f0f0f0", activeforeground="black", highlightbackground="white", relief="raised", bd=1, command=self.refresh_users).pack(side=tk.LEFT, padx=3)
+        tk.Button(toolbar, text="Clear", font=("Arial", 9, "bold"), bg="white", fg="black", activebackground="#f0f0f0", activeforeground="black", highlightbackground="white", relief="raised", bd=1, command=self._clear_user_search).pack(side=tk.LEFT, padx=2)
 
         # Right Action Buttons
-        tk.Button(toolbar, text="🔄 Refresh", font=("Arial", 9, "bold"), bg="#2980b9", fg="white", command=self.refresh_users).pack(side=tk.RIGHT, padx=3)
-        tk.Button(toolbar, text="📥 Export JSON", font=("Arial", 9, "bold"), bg="#16a085", fg="white", command=self._export_users_json).pack(side=tk.RIGHT, padx=3)
-        tk.Button(toolbar, text="🗑 Delete User", font=("Arial", 9, "bold"), bg="#c0392b", fg="white", command=self._delete_selected_user).pack(side=tk.RIGHT, padx=3)
-        tk.Button(toolbar, text="✏ Edit User", font=("Arial", 9, "bold"), bg="#f39c12", fg="white", command=self._edit_selected_user).pack(side=tk.RIGHT, padx=3)
-        tk.Button(toolbar, text="➕ Add User", font=("Arial", 9, "bold"), bg="#27ae60", fg="white", command=self._add_new_user_dialog).pack(side=tk.RIGHT, padx=3)
+        tk.Button(toolbar, text="🔄 Refresh", font=("Arial", 9, "bold"), bg="white", fg="black", activebackground="#f0f0f0", activeforeground="black", highlightbackground="white", relief="raised", bd=1, command=self.refresh_users).pack(side=tk.RIGHT, padx=3)
+        tk.Button(toolbar, text="📥 Export JSON", font=("Arial", 9, "bold"), bg="white", fg="black", activebackground="#f0f0f0", activeforeground="black", highlightbackground="white", relief="raised", bd=1, command=self._export_users_json).pack(side=tk.RIGHT, padx=3)
+        tk.Button(toolbar, text="🗑 Delete User", font=("Arial", 9, "bold"), bg="white", fg="black", activebackground="#f0f0f0", activeforeground="black", highlightbackground="white", relief="raised", bd=1, command=self._delete_selected_user).pack(side=tk.RIGHT, padx=3)
+        tk.Button(toolbar, text="✏ Edit User", font=("Arial", 9, "bold"), bg="white", fg="black", activebackground="#f0f0f0", activeforeground="black", highlightbackground="white", relief="raised", bd=1, command=self._edit_selected_user).pack(side=tk.RIGHT, padx=3)
+        tk.Button(toolbar, text="➕ Add User", font=("Arial", 9, "bold"), bg="white", fg="black", activebackground="#f0f0f0", activeforeground="black", highlightbackground="white", relief="raised", bd=1, command=self._add_new_user_dialog).pack(side=tk.RIGHT, padx=3)
 
         # Split pane: Table on left, Photo / detail card on right
         content_pane = tk.PanedWindow(self.tab_users, orient=tk.HORIZONTAL, bg="#ecf0f1", sashwidth=4)
@@ -221,7 +221,7 @@ class MrBeastAdminDashboard:
         speaker_combo.pack(side=tk.LEFT, padx=4)
         speaker_combo.bind("<<ComboboxSelected>>", lambda e: self.refresh_conversations())
 
-        tk.Button(toolbar, text="🔄 Refresh Logs", font=("Arial", 9, "bold"), bg="#2980b9", fg="white", command=self.refresh_conversations).pack(side=tk.RIGHT, padx=4)
+        tk.Button(toolbar, text="🔄 Refresh Logs", font=("Arial", 9, "bold"), bg="white", fg="black", activebackground="#f0f0f0", activeforeground="black", highlightbackground="white", relief="raised", bd=1, command=self.refresh_conversations).pack(side=tk.RIGHT, padx=4)
 
         cols = ("id", "time", "speaker", "lang", "intent", "conf", "message")
         self.convo_tree = ttk.Treeview(self.tab_convos, columns=cols, show="headings", selectmode="browse")
@@ -256,7 +256,7 @@ class MrBeastAdminDashboard:
         toolbar.pack(fill=tk.X, padx=8, pady=8)
 
         tk.Label(toolbar, text="Active & Completed Registration State Machine Sessions", font=("Arial", 10, "bold"), bg="#ecf0f1", fg="#2c3e50").pack(side=tk.LEFT, padx=4)
-        tk.Button(toolbar, text="🔄 Refresh Sessions", font=("Arial", 9, "bold"), bg="#2980b9", fg="white", command=self.refresh_sessions).pack(side=tk.RIGHT, padx=4)
+        tk.Button(toolbar, text="🔄 Refresh Sessions", font=("Arial", 9, "bold"), bg="white", fg="black", activebackground="#f0f0f0", activeforeground="black", highlightbackground="white", relief="raised", bd=1, command=self.refresh_sessions).pack(side=tk.RIGHT, padx=4)
 
         split = tk.PanedWindow(self.tab_sessions, orient=tk.HORIZONTAL, bg="#ecf0f1", sashwidth=4)
         split.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
@@ -303,9 +303,9 @@ class MrBeastAdminDashboard:
         toolbar = tk.Frame(self.tab_sync, bg="#ecf0f1")
         toolbar.pack(fill=tk.X, padx=8, pady=8)
 
-        tk.Button(toolbar, text="🔄 Trigger Sync to MySQL Now", font=("Arial", 10, "bold"), bg="#27ae60", fg="white", command=self._trigger_sync_action).pack(side=tk.LEFT, padx=4)
-        tk.Button(toolbar, text="🩺 Run Diagnostics", font=("Arial", 10, "bold"), bg="#8e44ad", fg="white", command=self._run_diagnostics).pack(side=tk.LEFT, padx=4)
-        tk.Button(toolbar, text="🔄 Refresh Queue", font=("Arial", 9, "bold"), bg="#2980b9", fg="white", command=self.refresh_sync_queue).pack(side=tk.RIGHT, padx=4)
+        tk.Button(toolbar, text="🔄 Trigger Sync to MySQL Now", font=("Arial", 10, "bold"), bg="white", fg="black", activebackground="#f0f0f0", activeforeground="black", highlightbackground="white", relief="raised", bd=1, command=self._trigger_sync_action).pack(side=tk.LEFT, padx=4)
+        tk.Button(toolbar, text="🩺 Run Diagnostics", font=("Arial", 10, "bold"), bg="white", fg="black", activebackground="#f0f0f0", activeforeground="black", highlightbackground="white", relief="raised", bd=1, command=self._run_diagnostics).pack(side=tk.LEFT, padx=4)
+        tk.Button(toolbar, text="🔄 Refresh Queue", font=("Arial", 9, "bold"), bg="white", fg="black", activebackground="#f0f0f0", activeforeground="black", highlightbackground="white", relief="raised", bd=1, command=self.refresh_sync_queue).pack(side=tk.RIGHT, padx=4)
 
         split = tk.PanedWindow(self.tab_sync, orient=tk.VERTICAL, bg="#ecf0f1", sashwidth=4)
         split.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
@@ -517,8 +517,8 @@ class MrBeastAdminDashboard:
 
         btn_f = tk.Frame(dialog, bg="#ecf0f1")
         btn_f.pack(pady=15)
-        tk.Button(btn_f, text="💾 Save", font=("Arial", 10, "bold"), bg="#27ae60", fg="white", command=save, padx=12).pack(side=tk.LEFT, padx=5)
-        tk.Button(btn_f, text="Cancel", font=("Arial", 10), bg="#95a5a6", fg="white", command=dialog.destroy, padx=10).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_f, text="💾 Save", font=("Arial", 10, "bold"), bg="white", fg="black", activebackground="#f0f0f0", activeforeground="black", highlightbackground="white", relief="raised", bd=1, command=save, padx=12).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_f, text="Cancel", font=("Arial", 10, "bold"), bg="white", fg="black", activebackground="#f0f0f0", activeforeground="black", highlightbackground="white", relief="raised", bd=1, command=dialog.destroy, padx=10).pack(side=tk.LEFT, padx=5)
 
     def _delete_selected_user(self):
         if not self.current_selected_user:

@@ -18,8 +18,9 @@ An advanced, production-grade multimodal AI desktop robot combining **Real-Time 
    - [3. Pluggable API & Tool Integration Registry](#3-pluggable-api--tool-integration-registry)
    - [4. Multi-Tier Database & Durable Sync Queue](#4-multi-tier-database--durable-sync-queue)
    - [5. Safe Tool Router & Bounded Memory](#5-safe-tool-router--bounded-memory)
-   - [6. Desktop UI with Live Badges & Camera](#6-desktop-ui-with-live-badges--camera)
-   - [7. Master Admin Dashboard (Desktop & Web)](#7-master-admin-dashboard-desktop--web)
+   - [6. Real-Time Camera Recognition & DB Auto-Fetch (Return Visits)](#6-real-time-camera-recognition--db-auto-fetch-return-visits)
+   - [7. Desktop UI with Live Badges & Camera](#7-desktop-ui-with-live-badges--camera)
+   - [8. Master Admin Dashboard (Desktop & Web)](#8-master-admin-dashboard-desktop--web)
 3. [Prerequisites & macOS Installation](#-prerequisites--macos-installation)
 4. [Configuration & Free-Tier API Providers](#-configuration--free-tier-api-providers)
 5. [Database Setup (MySQL & phpMyAdmin)](#-database-setup-mysql--phpmyadmin)
@@ -35,45 +36,60 @@ An advanced, production-grade multimodal AI desktop robot combining **Real-Time 
 
 ```mermaid
 flowchart TD
+    %% Vision & Re-visit Auto-Fetch Pipeline
+    subgraph VisionPipeline ["📸 Real-Time Vision & DB Auto-Fetch Pipeline"]
+        CAM["📸 OpenCV Video Stream (640x480)"] --> DET["👤 Haar Cascade Face Detection"]
+        DET --> EMB["🧬 128-d Face Embeddings (vision/embeddings.py)"]
+        EMB --> MATCH{"🔍 Vector Match in Database?"}
+        MATCH -- "Matched / Existing User" --> AUTOFETCH["🗄️ Auto-Fetch Profile from DB (MySQL / JSON)"]
+        AUTOFETCH --> UIOVERLAY["🟢 Live Camera Overlay: ✓ Name (ID) Registered in DB"]
+        AUTOFETCH --> UIPROFILE["📋 Auto-Populate UI Form: Name, Age, Job, City"]
+        AUTOFETCH --> GREET["🔊 TTS: 'Welcome back! You are already existing in our database.'"]
+        AUTOFETCH --> UPDATEDB[("🗄️ Update last_seen in MySQL")]
+        MATCH -- "Unregistered Visitor" --> PROMPT["👋 Offer: 'Say Create my profile to register!'"]
+    end
+
     %% Audio & Recognition Pipeline
-    MIC["🎤 Microphone / User Speech"] --> VAD["⚡ CoreAudio RMS Voice Activity Detection (VAD)"]
-    VAD --> STT["🗣️ Multi-Pass Speech Recognition (en-IN -> hi-IN -> en-US)"]
-    STT --> LANG["🌐 Language Detection (English / Hindi Devanagari / Hinglish)"]
-    LANG --> ORCH["🧠 Central AI Orchestrator (ai/orchestrator.py)"]
+    subgraph VoicePipeline ["🎤 Multilingual Voice & AI Orchestrator Pipeline"]
+        MIC["🎤 Microphone / User Speech"] --> VAD["⚡ CoreAudio RMS Voice Activity Detection (VAD)"]
+        VAD --> STT["🗣️ Multi-Pass Speech Recognition (en-IN -> hi-IN -> en-US)"]
+        STT --> LANG["🌐 Language Detection (English / Hindi Devanagari / Hinglish)"]
+        LANG --> ORCH["🧠 Central AI Orchestrator (ai/orchestrator.py)"]
 
-    %% Bounded Memory & Safe Tool Router
-    ORCH <--> MEM["💾 Bounded Conversation Memory (Max 10 turns, Privacy Safe)"]
-    ORCH --> TOOL{"🔧 Tool Execution Trigger?"}
-    TOOL -- "Yes (math / time / diag)" --> ROUTER["🛡️ Safe AST Tool Router (ai/tool_router.py)"]
-    ROUTER --> TTS["🔊 Dynamic Voice Switching (Lekha / Rishi / Aman)"]
+        %% Bounded Memory & Safe Tool Router
+        ORCH <--> MEM["💾 Bounded Conversation Memory (Max 10 turns, Privacy Safe)"]
+        ORCH --> TOOL{"🔧 Tool Execution Trigger?"}
+        TOOL -- "Yes (math / time / diag)" --> ROUTER["🛡️ Safe AST Tool Router (ai/tool_router.py)"]
+        ROUTER --> TTS["🔊 Dynamic Voice Switching (Lekha / Rishi / Aman)"]
 
-    %% Intent Routing
-    TOOL -- "No" --> INTENT{"🎯 Intent Classification"}
+        %% Intent Routing
+        TOOL -- "No" --> INTENT{"🎯 Intent Classification"}
 
-    %% Branch 1: Create Profile
-    INTENT -- "create_profile" --> SM["📋 11-State Registration Agent (ai/registration_agent.py)"]
-    SM --> EXTRACT["🔍 Multilingual Entity Extractor (Name, Age, City, Job)"]
-    EXTRACT --> CONFIRM["❓ User Confirmation (Yes / No / In-Flight Corrections)"]
-    CONFIRM --> SAVE["💾 Save Profile (MySQL + Durable Sync Queue + Photo)"]
-    SAVE --> SESSIONS[("🗄️ registration_sessions Table")]
-    SAVE --> USERINFO[("🗄️ user_info & user_images Tables")]
-    SAVE --> SYNCQ[("🗄️ sync_queue Table & captures/sync_queue.json")]
-    SAVE --> TTS
+        %% Branch 1: Create Profile
+        INTENT -- "create_profile" --> SM["📋 11-State Registration Agent (ai/registration_agent.py)"]
+        SM --> EXTRACT["🔍 Multilingual Entity Extractor (Name, Age, City, Job)"]
+        EXTRACT --> CONFIRM["❓ User Confirmation (Yes / No / In-Flight Corrections)"]
+        CONFIRM --> SAVE["💾 Save Profile (MySQL + Durable Sync Queue + Photo)"]
+        SAVE --> SESSIONS[("🗄️ registration_sessions Table")]
+        SAVE --> USERINFO[("🗄️ user_info & user_images Tables")]
+        SAVE --> SYNCQ[("🗄️ sync_queue Table & captures/sync_queue.json")]
+        SAVE --> TTS
 
-    %% Branch 2: Profile Lookup
-    INTENT -- "profile_lookup" --> LOOKUP["🔎 Profile Service Lookup (MySQL -> Local JSON)"]
-    LOOKUP --> TTS
+        %% Branch 2: Profile Lookup
+        INTENT -- "profile_lookup" --> LOOKUP["🔎 Profile Service Lookup (MySQL -> Local JSON)"]
+        LOOKUP --> TTS
 
-    %% Branch 3: General Conversation
-    INTENT -- "general_chat" --> PROVIDER{"🔌 Pluggable AI Provider"}
-    PROVIDER --> OLLAMA["🦙 Ollama Local (Free / Offline)"]
-    PROVIDER --> GROQ["⚡ Groq Llama 3.1 (Free Tier)"]
-    PROVIDER --> GEMINI["♊ Google Gemini Flash (Free Tier)"]
-    PROVIDER --> LOCAL["🧠 Local Scikit-Learn Naive Bayes Brain"]
-    OLLAMA --> TTS
-    GROQ --> TTS
-    GEMINI --> TTS
-    LOCAL --> TTS
+        %% Branch 3: General Conversation
+        INTENT -- "general_chat" --> PROVIDER{"🔌 Pluggable AI Provider"}
+        PROVIDER --> OLLAMA["🦙 Ollama Local (Free / Offline)"]
+        PROVIDER --> GROQ["⚡ Groq Llama 3.1 (Free Tier)"]
+        PROVIDER --> GEMINI["♊ Google Gemini Flash (Free Tier)"]
+        PROVIDER --> LOCAL["🧠 Local Scikit-Learn Naive Bayes Brain"]
+        OLLAMA --> TTS
+        GROQ --> TTS
+        GEMINI --> TTS
+        LOCAL --> TTS
+    end
 ```
 
 ---
@@ -168,7 +184,57 @@ The system implements a dual-store architecture: MySQL for production relational
 
 ---
 
-### 6. Desktop UI with Live Badges & Camera
+### 6. Real-Time Camera Recognition & DB Auto-Fetch (Return Visits)
+
+When an enrolled person appears in front of the camera, Mr. Beast AI automatically recognizes their face, fetches their complete record from MySQL / local store, renders live identification overlays, populates the desktop form, and speaks a return welcome:
+
+- **128-Dimensional Biometric Matching (`vision/embeddings.py`):**
+  Uses `face_recognition` with an explicit `known_face_locations` fallback for tight face crops. Compares live face vectors against stored embeddings in MySQL `user_images` and local storage (`captures/profiles.json`) at a strict similarity distance threshold of 0.55.
+- **Strict Biometric Verification & Authentic DB Data Only:**
+  Operates strictly on authentic database records—zero dummy or mock fallback profiles.
+  - **First-Time Visitors (New Human):** When an unregistered person appears in front of the camera, the system detects them as a **New Human**, outlines their face with a cyan badge (`New Human | Age: [Age] | Gender: [Gender]`), keeps form fields clean (`--`), and prompts: _"I see a new visitor. Say 'Create my profile' to register!"_
+  - **Voice / UI Registration:** The user speaks their name, age, city/address, and profession. The camera takes an authentic snapshot (`captures/[name]_profile_[timestamp].jpg`), extracts their real 128-d biometric embedding vector, and persists their complete profile into MySQL (`user_info`, `user_images`) and local backup (`captures/profiles.json`).
+  - **Return Visits (Auto-Fetch from DB):** When the enrolled person stands before the camera again, the system computes their live embedding, strictly matches it against the stored DB vector (distance < 0.55), automatically fetches their complete profile from the database, renders a solid green badge (`✓ [Name] (ID: [ID]) - Registered in DB`), populates the UI User Profile Form, and speaks: _"Welcome back, [Name]! You are already existing in our database."_
+- **Live Visual Feed Identification Overlay:**
+  Overlays a prominent green bounding box on the camera canvas with a header banner:
+  - `✓ [Name] (ID: [ID])`
+  - `Registered in DB`
+  - `[Profession] | Age: [Age]`
+- **Immediate Desktop Profile Form Population:**
+  The **👤 User Profile Form** panel on the right side immediately auto-populates with:
+  - **Status:** `✅ AUTO-FETCHED: Existing in DB (ID: [ID])`
+  - **Name:** User's registered full name
+  - **Age:** Registered age (locked with `🔒`)
+  - **Job / Studies:** Current occupation or college
+  - **Address:** Enrolled city and address
+  - **Email & Phone:** Contact coordinates
+- **Spoken Return Greeting & Telemetry:**
+  Text-to-Speech announces:
+  > _"Welcome back, [Name]! You are already existing in our database."_  
+  > _(Or in Hindi: "Welcome back [Name]! Aap hamare database me pehle se registered hain.")_  
+  > Automatically updates the `last_seen` timestamp and increments conversation interaction counts in MySQL `user_info` and local storage.
+- **Multi-Visit Debounce Engine:**
+  If the visitor steps away from the camera for more than 3.5 seconds, the active visitor session resets cleanly, clearing form fields. When they return in front of the camera, the system detects their arrival, re-fetches their fresh data from the DB, and greets them again.
+- **Verified Profile Modal Popup with Captured Image & Timeline:**
+  When an existing user is recognized or newly enrolled, the system automatically launches a dedicated modal dialog (`👤 Enrolled Database Profile — [Name] (ID: #[ID])`):
+  - **Section 1 — Complete User Details Card & Captured Photo:** Displays the user's authentic captured facial snapshot ($175 \times 175$ px) alongside prominent personal demographics (Full Name, Record ID, Gender, Age, Preferred Language, Job/Studies, City/Address, Email, Phone, Biometric Consent, DB Sync status).
+  - **Section 2 — Facial Biometrics & Storage Metadata (`user_images`):** File path, resolution, file size, primary key, 128-d vector inspection, and Euclidean distance threshold ($< 0.55$).
+  - **Section 3 — Database Persistence & Telemetry Metrics (`user_info`):** Database engine (MySQL/Local), sync status, first enrolled, last seen, conversation counts, avg dialogue length, and engagement score.
+  - **Section 4 — Multi-Stage Visual Activity Timeline:** Chronological timeline showing Initial Registration, Biometric Vector Extraction, Relational Persistence, Return Visit camera matches, and conversational interactions.
+  - **Section 5 — Raw Database Record Inspector:** Expandable raw JSON inspector of the exact record persisted in MySQL.
+  - **Action Controls:** High-contrast `[ ✕ Close Modal ]`, `[ ⚙ Open in Admin Dashboard ]`, and `[ ✏ Edit Profile ]` buttons. Users can also manually open this modal at any time using the `[ 🔍 View Modal & Timeline ]` button on the Desktop UI.
+
+- **Interactive User Enrollment Modal (`[ 📝 Enroll User ]`):**
+  Clicking `[ 📝 Enroll User ]` on the desktop UI launches an enrollment window (`open_enroll_modal`):
+  - **Biometric Camera Preview & Telemetry:** Displays live camera snapshot preview ($160 \times 160$ px) with `[ 📸 Refresh Snapshot ]`, real-time detected age/gender, 128-d embedding status, and MySQL database indicators.
+  - **Enrolled User Profile Details Form:** Pre-fills and lets users input Full Name, Age (Years), Gender, Preferred Language, Job/Studies, City/Address, Email Address, Phone Number, and Biometric Consent.
+  - **Sync Specification Summary:** Highlights persistence to `user_info` and `user_images` with Euclidean distance threshold $< 0.55$ for future automated return visits.
+  - **1-Click Biometric Enrollment (`[ 📸 Capture & Enroll in Database ]`):** Captures webcam frame, computes 128-d face embedding, persists to MySQL and offline queue, triggers TTS welcome, and immediately launches the Enrolled Profile Modal showing full user details and timeline.
+  - **Voice Registration Hand-off (`[ 🎤 Start Voice Registration ]`):** Hands-free voice onboarding with Mr. Beast AI.
+
+---
+
+### 7. Desktop UI with Live Badges & Camera
 
 Built using Python Tkinter (`ui/robot_ui.py`) with automatic fallback to CLI:
 
@@ -177,24 +243,28 @@ Built using Python Tkinter (`ui/robot_ui.py`) with automatic fallback to CLI:
   - `[ 🤖 AI: Ready (Groq/Ollama/Local) ]`
   - `[ 🔄 Sync: 0 Pending ]`
 - **Language Selector Combobox:** Allows user to lock language to `Auto Detect`, `English (en)`, `Hindi (hi)`, or `Hinglish`.
-- **Live User Profile Form Card:** Displays real-time updates as answers are extracted from speech, with:
+- **Live User Profile Form Card:** Displays real-time updates as answers are extracted from speech or auto-fetched from the database:
+  - `[ 📝 Enroll User ]`: Opens the interactive biometric enrollment modal with live snapshot preview and user details inputs.
   - `[ ✏ Edit Card ]`: Opens a modal dialog to manually inspect and edit fields.
   - `[ 🔄 Sync DB ]`: Manually flushes offline pending records to MySQL.
-- **OpenCV 640x480 Live Canvas:** Shows bounding box, demographic predictions, and emotion estimates.
-- **Header Toolbar Admin Button:** Direct `[ 🛡️ Admin ]` button launching the graphical administration console.
+  - `[ 🔍 View Modal & Timeline ]`: Opens the full verified database modal with photo, user details, and timeline.
+- **OpenCV 640x480 Live Canvas:** Shows bounding boxes, DB registration badges, demographic predictions, and emotion estimates.
+- **Header Toolbar Admin Button:** Direct `[ 🛡️ Admin ]` button brings the administrative console to the front using `lift()`, `focus_force()`, and `deiconify()`.
+- **High-Contrast UI Styling:** All interactive buttons formatted with pure white backgrounds (`bg="white"`) and high-contrast black text (`fg="black"`).
 
 ---
 
-### 7. Master Admin Dashboard (Desktop & Web)
+### 8. Master Admin Dashboard (Desktop & Web)
 
 Provides unified system visibility and control across MySQL (`mr_beast_db`) and offline fallback stores:
 
 - **Desktop Graphical Console (`ui/admin_dashboard.py`):**
   - **Header Telemetry Cards:** Total Users, Conversation Logs, Pending Sync Queue, and Live MySQL Latency.
-  - **Tab 1 — 👥 User Profiles:** Search filter, sortable multi-column table (ID, Name, Age, Gender, Job, City, Email, Phone, Status), photo preview badge, and full CRUD modal actions (Add, Edit, Delete).
-  - **Tab 2 — 💬 Conversation History:** Multi-speaker turn viewer with speaker filtering (`All`, `User`, `Robot`), detected language, extracted intent, and confidence score.
-  - **Tab 3 — 📋 Registration Sessions:** Inspect live in-progress and completed sessions from `registration_sessions` with formatted JSON payload viewer.
-  - **Tab 4 — 🔄 Sync Queue & Health Diagnostics:** Inspect durable offline items, trigger immediate sync to MySQL, and view live component diagnostics.
+  - **One-Click Web Launch:** Top `[ 🌐 Web Admin ]` button launches the in-browser management console on port 8080 and opens it in your default browser.
+  - **Tab 1 — 👥 User Profiles:** Search filter, sortable multi-column table (ID, Name, Age, Gender, Job, City, Email, Phone, Status), photo preview badge, auto-selected details card on load, row double-click editing, and full CRUD modal actions (Add, Edit, Delete).
+  - **Tab 2 — 💬 Conversation History:** Multi-speaker turn viewer with speaker filtering (`All`, `User`, `Robot`), detected language, extracted intent, confidence score, and full multi-line response inspector.
+  - **Tab 3 — 📋 Registration Sessions:** Inspect live in-progress and completed sessions from `registration_sessions` with auto-loaded formatted JSON state machine inspector.
+  - **Tab 4 — 🔄 Sync Queue & Health Diagnostics:** Inspect durable offline items with formatted JSON payload preview, trigger immediate sync to MySQL, and view live component diagnostics.
   - **JSON Data Export:** Single-click export of the entire database state into a portable JSON document.
 - **Zero-Dependency Web Admin Dashboard (`services/web_admin.py`):**
   - Runs in any web browser at `http://localhost:8080`.
@@ -414,7 +484,7 @@ The project includes an end-to-end automated test suite covering all modules:
 ./venv/bin/python main.py --test-all
 ```
 
-### Test Coverage Summary (35 Tests Passing in ~3.2s):
+### Test Coverage Summary (36 Tests Passing in ~3.3s):
 
 - `tests/test_admin_service.py`: Multi-store data aggregation, search filtering, user CRUD, export, and telemetry.
 - `tests/test_entity_extractor.py`: Multilingual name, age, city, job, email, and phone parsing.
@@ -424,7 +494,7 @@ The project includes an end-to-end automated test suite covering all modules:
 - `tests/test_sync_manager.py`: Durable local queue (`sync_queue.json`), idempotent deduplication, and sync status.
 - `tests/test_tool_router.py`: AST math evaluation safety, datetime, diagnostics, and confirmation gates.
 - `tests/test_provider_registry.py`: Abstract provider health checks and fallback mechanics.
-- `tests/test_profile_service.py`: CRUD operations, UUID generation, local JSON + MySQL dual-store persistence.
+- `tests/test_profile_service.py`: CRUD operations, UUID generation, local JSON + MySQL dual-store persistence, ID lookup, and database profile auto-fetch verification (`test_auto_fetch_db_and_get_all_users`).
 
 ---
 

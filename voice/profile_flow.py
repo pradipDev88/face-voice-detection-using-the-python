@@ -22,7 +22,7 @@ from voice.language_manager import LanguageManager
 class VoiceProfileFlow:
     """Manages multi-step voice profile creation and camera snapshot"""
 
-    def __init__(self, tts, stt, brain, user_store, face_capture=None, face_embeddings=None, ui_callback=None):
+    def __init__(self, tts, stt, brain, user_store, face_capture=None, face_embeddings=None, ui_callback=None, profile_service=None):
         self.tts = tts
         self.stt = stt
         self.brain = brain
@@ -30,6 +30,7 @@ class VoiceProfileFlow:
         self.face_capture = face_capture
         self.face_embeddings = face_embeddings
         self.ui_callback = ui_callback
+        self.profile_service = profile_service
         
         self.is_active = False
         self.current_lang = 'en'
@@ -259,7 +260,13 @@ class VoiceProfileFlow:
 
         # Step 7: Save Profile to Database & Storage
         user_id = None
-        if self.user_store:
+        if self.profile_service:
+            saved_record = self.profile_service.save_profile(self.profile_data, frame=current_frame)
+            user_id = saved_record.get('user_id')
+            if saved_record.get('photo_path'):
+                photo_path = saved_record['photo_path']
+                self.profile_data['photo_path'] = photo_path
+        elif self.user_store:
             user_id = self.user_store.create_user(
                 name=self.profile_data['name'],
                 age_range=f"({self.profile_data['age']})",

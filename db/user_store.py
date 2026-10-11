@@ -90,6 +90,7 @@ class UserStore:
         # Update if exists or append
         existing_idx = next((i for i, p in enumerate(profiles) if p.get('name', '').lower() == name.lower()), None)
         if existing_idx is not None:
+            profile_entry['embeddings'] = profiles[existing_idx].get('embeddings', [])
             profiles[existing_idx].update(profile_entry)
         else:
             profiles.append(profile_entry)
@@ -224,13 +225,36 @@ class UserStore:
                 pass
 
         # Merge local profiles
-        for p in self._load_local_profiles():
+        local_profiles = self._load_local_profiles()
+        profiles_updated = False
+        for p in local_profiles:
             uid = p.get('id')
             uname = p.get('name')
             if str(uid) in seen_user_ids:
                 continue
-            for emb in p.get('embeddings', []):
-                results.append({'user_id': uid, 'name': uname, 'embedding': emb})
+            
+            embs = p.get('embeddings', [])
+            if embs:
+                for emb in embs:
+                    results.append({'user_id': uid, 'name': uname, 'embedding': emb})
+                seen_user_ids.add(str(uid))
+            else:
+                photo_path = p.get('photo_path')
+                if photo_path and os.path.exists(photo_path):
+                    try:
+                        import face_recognition
+                        loaded_img = face_recognition.load_image_file(photo_path)
+                        encs = face_recognition.face_encodings(loaded_img)
+                        if encs:
+                            emb = encs[0].tolist()
+                            p.setdefault('embeddings', []).append(emb)
+                            results.append({'user_id': uid, 'name': uname, 'embedding': emb})
+                            seen_user_ids.add(str(uid))
+                            profiles_updated = True
+                    except Exception:
+                        pass
+        if profiles_updated:
+            self._save_local_profiles(local_profiles)
 
         return results
 

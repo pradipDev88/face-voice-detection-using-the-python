@@ -1,16 +1,1 @@
-[
-  {
-    "id": 1002,
-    "name": "Ashish Ojha",
-    "age_range": "(26)",
-    "gender": "Male",
-    "college_or_job": "Software Engineer",
-    "address": "Mumbai, India",
-    "photo_path": "captures/ashish_ojha_profile_20261010_114248.jpg",
-    "consent": "Yes",
-    "created_at": "2026-10-10T11:42:48.154832",
-    "last_seen": "2026-10-10T11:42:48.154832",
-    "conversation_count": 1,
-    "embeddings": []
-  }
-]
+[]

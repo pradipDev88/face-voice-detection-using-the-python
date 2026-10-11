@@ -129,7 +129,7 @@ class MrBeastRobot:
         # Generate face embedding (NEW)
         embedding = self.face_embeddings.get_embedding(face_roi)
         
-        # Try to match with database (NEW)
+        # Try to match with database
         matched_user = None
         if embedding is not None and self.user_store:
             known_embeddings = self.user_store.get_all_embeddings()
@@ -139,22 +139,6 @@ class MrBeastRobot:
                     known_embeddings,
                     threshold=self.config['face']['similarity_threshold']
                 )
-            if matched_user is None:
-                all_users = self.user_store.get_all_users()
-                if all_users and len(all_users) == 1:
-                    u = all_users[0]
-                    uid = u.get('id') or u.get('user_id')
-                    uname = u.get('name')
-                    try:
-                        self.user_store.save_user_image(
-                            user_id=uid,
-                            file_path=u.get('photo_path') or f"captures/{uname.lower().replace(' ', '_')}.jpg",
-                            embedding=embedding,
-                            is_primary=True
-                        )
-                    except Exception:
-                        pass
-                    matched_user = {'user_id': uid, 'name': uname, 'confidence': 98.0}
         
         return {
             'age': age,

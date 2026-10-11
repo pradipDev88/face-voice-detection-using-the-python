@@ -3,36 +3,9 @@
     "log_id": 1,
     "user_id": null,
     "speaker": "System",
-    "message": "Stable age detected: 18, Gender: Male",
-    "intent": "age_detection",
-    "confidence": 0.95,
-    "timestamp": "2026-10-10 15:38:49"
-  },
-  {
-    "log_id": 2,
-    "user_id": null,
-    "speaker": "System",
-    "message": "Stable age detected: 28, Gender: Male",
-    "intent": "age_detection",
-    "confidence": 0.95,
-    "timestamp": "2026-10-10 16:09:12"
-  },
-  {
-    "log_id": 3,
-    "user_id": null,
-    "speaker": "System",
-    "message": "Stable age detected: 28, Gender: Male",
-    "intent": "age_detection",
-    "confidence": 0.95,
-    "timestamp": "2026-10-10 16:10:05"
-  },
-  {
-    "log_id": 4,
-    "user_id": null,
-    "speaker": "System",
     "message": "Stable age detected: 28, Gender: Female",
     "intent": "age_detection",
     "confidence": 0.95,
-    "timestamp": "2026-10-10 16:11:59"
+    "timestamp": "2026-10-10 17:53:25"
   }
 ]
